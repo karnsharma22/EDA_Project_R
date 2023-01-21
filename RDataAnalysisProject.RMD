@@ -1,0 +1,239 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded your data file will be called `brfss2013`. Delete this note when before you submit your work.
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+------------------------------------------------------------------------
+
+## Part 1: Data
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is a collaborative project between all of the states in the United States (US) and participating US territories and the Centers for Disease Control and Prevention (CDC). The BRFSS is administered and supported by CDC's Population Health Surveillance Branch, under the Division of Population Health at the National Center for Chronic Disease Prevention and Health Promotion. BRFSS is an ongoing surveillance system designed to measure behavioral risk factors for the non-institutionalized adult population (18 years of age and older) residing in the US. The BRFSS was initiated in 1984, with 15 states collecting surveillance data on risk behaviors through monthly telephone interviews. Over time, the number of states participating in the survey increased; by 2001, 50 states, the District of Columbia, Puerto Rico, Guam, and the US Virgin Islands were participating in the BRFSS. Today, all 50 states, the District of Columbia, Puerto Rico, and Guam collect data annually and American Samoa, Federated States of Micronesia, and Palau collect survey data over a limited point- in-time (usually one to three months). In this document, the term "state" is used to refer to all areas participating in BRFSS, including the District of Columbia, Guam, and the Commonwealth of Puerto Rico.
+
+The BRFSS objective is to collect uniform, state-specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries, and preventable infectious diseases that affect the adult population. Factors assessed by the BRFSS in 2013 include tobacco use, HIV/AIDS knowledge and prevention, exercise, immunization, health status, healthy days --- health-related quality of life, health care access, inadequate sleep, hypertension awareness, cholesterol awareness, chronic health conditions, alcohol consumption, fruits and vegetables consumption, arthritis burden, and seatbelt use. Since 2011, BRFSS conducts both landline telephone- and cellular telephone-based surveys. In conducting the BRFSS landline telephone survey, interviewers collect data from a randomly selected adult in a household. In conducting the cellular telephone version of the BRFSS questionnaire, interviewers collect data from an adult who participates by using a cellular telephone and resides in a private residence or college housing.
+
+Health characteristics estimated from the BRFSS pertain to the non-institutionalized adult population, aged 18 years or older, who reside in the US. In 2013, additional question sets were included as optional modules to provide a measure for several childhood health and wellness indicators, including asthma prevalence for people aged 17 years or younger.
+
+```{r}
+
+```
+
+------------------------------------------------------------------------
+
+## Part 2: Research questions
+
+**Research question 1:** For Research question 1 we want to check if there is a correlation between sleep duration and and the number of days a person has experienced poor physical and mental health in last 30 days.
+
+**Research question 2:** For research question 2, we want to inspect the relationship between level of satisfaction in people's lives and the income groups in which they categorize themselves.
+
+**Research question 3:** For research question 3, we want to check if there is a relation between the heights and the weights of all the observation.
+
+------------------------------------------------------------------------
+
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" button (green button with orange arrow) above. Make sure that your code is visible in the project you submit. Delete this note when before you submit your work.
+
+**Research question 1:** To check if there is a correlation between sleep duration and the average number of days a person experienced poor physical and mental health in last 30 days, we will take a look at the variables `sleptim1`, `physhlth` and `menthlth` of the dataset `brfsss2013`.
+
+Firstly, we will group the entire dataset into groups based on the number of hours a person sleeps, ranging from 1 to 24 hours, using the `group_by` function.
+
+Before grouping we will make sure to eliminate the `NA` values and also eliminate the outlying values from 20 to 24 hours since only a tiny number of respondents have reported sleep hours in this range and this may unduly affect the study. This can be done using the `filter` function. We would also want to filter `NA` values from the `physhlth` and `menthlth` variables.
+
+Using the `summarise` function we can calculate the the average number of poor health days people experience corresponding to each sleep duration group.
+
+We create two separate datasets for poor mental health (`sleepnmenthlth`) and poor physical health(`sleepnphyshlth`). For poor mental health:
+
+```{r}
+sleepnmenthlth <- brfss2013%>%
+filter(sleptim1 %in% c(1:20),!is.na(menthlth))%>%
+group_by(sleptim1)%>%
+summarise(poormentalhealth= mean(menthlth))
+```
+
+And for poor physical health:
+
+```{r}
+sleepnphyshlth <- brfss2013%>%
+filter(sleptim1 %in% c(1:20),!is.na(physhlth))%>%
+group_by(sleptim1)%>%
+summarise(poorphysicalhealth= mean(physhlth))
+
+```
+
+Now, we will plot line a chart to see whether or not there is a correlation between sleep duration and average number of days of poor mental health using the `ggplot` function.
+
+```{r}
+ggplot(sleepnmenthlth, aes(x= sleptim1, y= poormentalhealth))+geom_point()+geom_line()
+
+```
+
+It is observed through this plot that the average number of days of poor mental health tends to be around 11 to 13 days for people who sleep for 1-3 hours. It is followed by a considerably steep decline in the days of poor mental health as sleeping hours increase.
+
+Though, we can also observe that average number of days of poor health start to increase again at 10 hours of sleep.
+
+Therefore, the correlation that can be derived from this plot is that extremely less hours of sleep i.e. 1 to 4 hours and excessive hours of sleep i.e. 11 creates a tendency of higher number of days of poor health. 5-9 hours of sleep tends to have the least average number of poor health days meaning these can considered to be the ideal hours of sleep. Same is the case in relation to poor physical health as shown below:
+
+```{r}
+ggplot(sleepnphyshlth, aes(x=sleptim1, y=poorphysicalhealth))+geom_point()+geom_line()
+
+```
+
+**Research question 2:** To check if the there is correlation between overall satisfaction in life and different income levels, we will be working with variable like`X_incomg,` `lsatify`, `physhlth` and `menthlth` and a few more.
+
+I created a substitute variable for `X_incomg` called `incomeK` for the sake of clarity in plots' axes display.
+
+```{r}
+brfss2013<- brfss2013%>%
+mutate(incomeK= ifelse(X_incomg=="Less than $15,000","$0-$15K",ifelse(X_incomg=="$15,000 to less than $25,000","$15K-$25K",ifelse(X_incomg=="$25,000 to less than $35,000","$25K-$35K",ifelse(X_incomg=="$35,000 to less than $50,000","$35K-$50K",">$50K")))))
+```
+
+To start with, we will first divide the entire dataset into groups based on the income levels and further divide these group into 4 degrees of satisfaction of people in that income group (very satisfied, satisfied, dissatisfied, very dissatisfied).
+
+```{r}
+incomensatisfaction<-brfss2013%>%
+filter(!is.na(incomeK),!is.na(lsatisfy))%>%
+group_by(incomeK,lsatisfy)%>%
+summarise(number=n())
+```
+
+To illustrate in tabular form:
+
+```{r}
+brfss2013%>%
+filter(!is.na(incomeK),!is.na(lsatisfy))%>%
+group_by(incomeK,lsatisfy)%>%
+summarise(number=n())
+```
+
+We will plot a stacked bar graph, using `geom_bar`, for the visual representation of the following:
+
+```{r}
+ggplot(incomensatisfaction, aes(x=incomeK,y=number,fill=lsatisfy))+geom_bar(position="fill",stat = "identity")
+```
+
+As seen in this graph, the proportion of "*very satisfied*" people gets larger in higher income groups and the proportion of "*dissatisfied*" and "*very dissatisfied*" gets smaller in higher income groups.
+
+To establish a reason for this correlation, we will look into into variables of `physhlth` and `menthlth`.
+
+First, we will see the relationship between different income levels of individuals and their their physical health. We will group the entire data using the `group_by` function into the levels of income and average number of days of poor physical health corresponding to them.
+
+```{r}
+incomenphyshealth<-brfss2013%>%
+filter(!is.na(incomeK),!is.na(physhlth))%>%
+group_by(incomeK)%>%
+summarise(poorphysdays=mean(physhlth))
+```
+
+We will plot this data to get a visual understanding of the result using `ggplot` function.
+
+```{r}
+ggplot(incomenphyshealth, aes(x=incomeK,y=poorphysdays))+geom_bar(stat="identity")
+```
+
+We will write the same set of codes to inspect the relationship between income and average number of poor mental health days.
+
+```{r}
+incomenmenthealth<-brfss2013%>%
+filter(!is.na(incomeK),!is.na(menthlth))%>%
+group_by(incomeK)%>%
+summarise(poormentdays=mean(menthlth))
+```
+
+```{r}
+ggplot(incomenmenthealth, aes(x=incomeK,y=poormentdays))+geom_bar(stat="identity")
+```
+
+These plots shows that as the average number of poor physical and mental heath days tend to be lower in the higher income levels. To back this claim we can cross check with the help of two other variables: `medcost` and `hlthpln1`.
+
+We can check this by building a stacked bar graph based on the information whether or not the person in the observation, in last 12 months, was not able to see the doctor due to cost. In this variable, people were asked "*Was there a time in the past 12 months when you needed to see a doctor but could not because of cost?"*
+
+```{r}
+incomenmedcost <- brfss2013%>%
+filter (!is.na(incomeK),!is.na(medcost))%>%
+group_by (incomeK,medcost)%>%
+summarise (n=n())
+
+ggplot(incomenmedcost, aes(x=incomeK,y=n,fill=medcost))+geom_bar(position= "fill", stat = "identity")
+```
+
+`hlthpln1` variable tells if a person has a health care plan of any sort.
+
+```{r}
+incomenhlthpln1<-brfss2013%>%
+filter(!is.na(incomeK),!is.na(hlthpln1))%>%
+group_by(incomeK,hlthpln1)%>%
+summarise(n=n())
+
+ggplot(incomenhlthpln1, aes(x=incomeK,y=n,fill=hlthpln1))+geom_bar(position="fill",stat = "identity")
+```
+
+We can see a relation between all of the three variables (`X_incomg`, `physhlth`, , `menthlth`, `medcost` and `hlthpln1`) and we can draw some inferences. A higher income level means ease in access to doctors and and a health care plan. Therefore, higher income levels tend to experience better physical and mental health.
+
+```{r}
+```
+
+.
+
+```{r}
+```
+
+**Research question 3:** In this question we want to check if there is a relation between the heights and the weights of all the observation. We want to see whether there is a positive or a negative relation (dependent variables) between these two variables `wtkg3` and `htm4`, or if there is any relation at all i.e. the variables are independent of each other.
+
+First, we will create substitute variables for `wtkg3` and `htm4` for the sake clear understanding of the readers by placing a decimal before the last to digits (as recommended by the description of the dataset) so that they correctly represent the metric units of kilograms (kg) and meters (m) respectively.
+
+```{r}
+brfss2013 <- brfss2013%>%
+mutate(weightKG=wtkg3/100)
+
+brfss2013 <- brfss2013%>%
+mutate(heightM=htm4/100)
+```
+
+We have the new variable `weightKG` and `height`. Now we will plot the following variables in a scatter plot using `geom_pont`. This choice of plot is appropriate as both of the variables are **continuous numerical variables**.
+
+```{r}
+
+```
+
+There are three important aspects that can be observed in this plot. First, there is a slight positive relation between `heightM` and `weightKG`. Second, the relation is non-linear, meaning there isn't a constant positive increase. and Third, majority of data is clustered in a specific area with a few observation straying away from the cluster.
+
+1.  There is a slight positive relation between `heightM` and `weightKG`.
+
+2.  The relation is non-linear, meaning there isn't a constant positive increase.
+
+3.  Majority of data is clustered in a specific area with a few observations straying away from the cluster.
+
+-   The slight positive direction suggests that with an increase in height there tends to be an increase in the weight. This, however, is not always the case as there are some observation where weight is high even corresponding to a comparatively short height.
+
+    But it can be observed that majority of the people who weigh more than 100 and 150 kg tend to be of the height more than 1.5m and majority of people who shorter than 1.5m weigh less than 100 kg. One possible explanation for this can be the weight of bones that is higher in taller people.
+
+-   The direction of the plot is non- linear, which suggests that trend of increase in weight with increase in height is not at a constant rate. This is because human height starts to reach its natural limit some where near 2m - 2.4m and the plot seems to plateau (upward direction) at that point.
+
+-   Most of the observations are clustered in a plausible range of 1.4m -2m height and weigh 40kg -160kg. However, we can a see a few outliers at the bottom right of the cluster. These are the observation who happen to very tall but weigh less than other tall people.
+
+    There are also some outliers at the top of the cluster which represent the observations that weight excessively higher than the rest of the observation.
+
+Research questions formed and Explanatory Data Analyisis done by:
+
+**Karn Sharma**
